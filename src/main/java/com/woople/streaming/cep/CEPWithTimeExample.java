@@ -37,7 +37,7 @@ public class CEPWithTimeExample {
             @Override
             public SubEvent map(String value) throws Exception {
                 String[] v = value.split(",");
-                return new SubEvent(v[0], EventType.valueOf(v[1]), Double.parseDouble(v[2]), Long.parseLong(v[3]));
+                return new SubEvent(v[0], EventType.valueOf(v[1]), Double.parseDouble(v[2]), v[3]);
             }
         }).assignTimestampsAndWatermarks(new BoundedOutOfOrdernessGenerator());
 
@@ -49,7 +49,7 @@ public class CEPWithTimeExample {
                         return subEvent.getType() == EventType.VALID && subEvent.getVolume() < 10;
                     }
                 }
-        ).followedBy("end").where(
+        ).next("end").where(
                 new SimpleCondition<SubEvent>() {
                     @Override
                     public boolean filter(SubEvent subEvent) {
@@ -82,14 +82,14 @@ public class CEPWithTimeExample {
 
     private static class BoundedOutOfOrdernessGenerator implements AssignerWithPeriodicWatermarks<SubEvent> {
 
-        private final long maxOutOfOrderness = 2000;
+        private final long maxOutOfOrderness = 5000;
 
         private long currentMaxTimestamp;
 
         @Override
         public long extractTimestamp(SubEvent subEvent, long previousElementTimestamp) {
             System.out.println("SubEvent is " + subEvent);
-            long timestamp = subEvent.getTimestamp();
+            long timestamp = StringUtilsPlus.dateToStamp(subEvent.getDate());
             currentMaxTimestamp = Math.max(timestamp, currentMaxTimestamp);
             System.out.println("watermark:" + StringUtilsPlus.stampToDate(String.valueOf(currentMaxTimestamp - maxOutOfOrderness)));
             return timestamp;
