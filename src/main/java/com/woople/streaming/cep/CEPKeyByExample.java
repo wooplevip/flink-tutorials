@@ -17,7 +17,7 @@ import java.util.Properties;
 public class CEPKeyByExample {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
+        env.setParallelism(1);
         Properties properties = new Properties();
         properties.setProperty("bootstrap.servers", "host-10-1-236-139:6667");
         properties.setProperty("group.id", "cepG");
