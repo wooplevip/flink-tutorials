@@ -13,7 +13,6 @@ import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.types.Row;
-
 import java.util.Properties;
 
 public class FlinkCEPSqlExample {
@@ -55,21 +54,15 @@ public class FlinkCEPSqlExample {
                 "            B AS B.price > 100 " +
                 "    )");
 
-
         final TableSchema tableSchemaResult = new TableSchema(new String[]{"symbol","firstPrice","lastPrice"}, new TypeInformation[]{Types.STRING, Types.LONG, Types.LONG});
         final TypeInformation<Row> typeInfoResult = tableSchemaResult.toRowType();
         DataStream ds = tableEnv.toAppendStream(result, typeInfoResult);
-
         ds.print();
-
-
         env.execute("Flink CEP via SQL example");
     }
 
     private static class BoundedOutOfOrdernessGenerator implements AssignerWithPeriodicWatermarks<Row> {
-
         private final long maxOutOfOrderness = 5000;
-
         private long currentMaxTimestamp;
 
         @Override

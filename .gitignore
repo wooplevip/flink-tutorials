@@ -1,2 +1,6 @@
 /.idea/
 target
+streaming/target
+deprecation/target
+streaming/*.iml
+deprecation/*.iml
