@@ -16,20 +16,21 @@ import javax.annotation.Nullable;
  */
 public class CustomWatermarkExtractor implements AssignerWithPeriodicWatermarks<KafkaEvent> {
 
-	private static final long serialVersionUID = -742759155861320823L;
+	private final long maxOutOfOrderness = 5000;
 
-	private long currentTimestamp = Long.MIN_VALUE;
+	private long currentMaxTimestamp;
 
 	@Override
-	public long extractTimestamp(KafkaEvent event, long previousElementTimestamp) {
-		// the inputs are assumed to be of format (message,timestamp)
-		this.currentTimestamp = event.getTimestamp();
-		return event.getTimestamp();
+	public long extractTimestamp(KafkaEvent kafkaEvent, long previousElementTimestamp) {
+		System.out.println("kafkaEvent is " + kafkaEvent);
+		long timestamp = kafkaEvent.getTimestamp();
+		currentMaxTimestamp = Math.max(timestamp, currentMaxTimestamp);
+		System.out.println("watermark:" + String.valueOf(currentMaxTimestamp - maxOutOfOrderness));
+		return timestamp;
 	}
 
-	@Nullable
 	@Override
 	public Watermark getCurrentWatermark() {
-		return new Watermark(currentTimestamp == Long.MIN_VALUE ? Long.MIN_VALUE : currentTimestamp - 1);
+		return new Watermark(currentMaxTimestamp - maxOutOfOrderness);
 	}
 }

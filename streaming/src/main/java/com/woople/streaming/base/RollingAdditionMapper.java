@@ -17,6 +17,7 @@ public class RollingAdditionMapper extends RichMapFunction<KafkaEvent, KafkaEven
 
 	@Override
 	public KafkaEvent map(KafkaEvent event) throws Exception {
+		System.out.println(event + " ============ ");
 		Integer totalCount = currentTotalCount.value();
 
 		if (totalCount == null) {

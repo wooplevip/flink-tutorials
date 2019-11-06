@@ -1,6 +1,8 @@
 package com.woople.streaming.base;
 
-public class KafkaEvent {
+import java.io.Serializable;
+
+public class KafkaEvent implements Serializable {
 
 	private String word;
 	private int frequency;
