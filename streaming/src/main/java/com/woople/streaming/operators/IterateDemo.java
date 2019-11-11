@@ -50,7 +50,7 @@ public class IterateDemo {
 
         @Override
         public void run(SourceContext<Tuple2<String, Integer>> ctx) throws Exception {
-            int bound = 40;
+            int bound = 20;
             String[] keys = new String[]{"foo", "bar", "baz"};
 
             final long numElements = RandomUtils.nextLong(10, 20);
@@ -61,7 +61,7 @@ public class IterateDemo {
                 if (i == 0){
                     ctx.collect(new Tuple2<>(keys[RandomUtils.nextInt(0, 3)], 36));
                 }else {
-                    Tuple2 data = new Tuple2<>(keys[RandomUtils.nextInt(0, 3)], RandomUtils.nextInt(10, 20));
+                    Tuple2 data = new Tuple2<>(keys[RandomUtils.nextInt(0, 3)], RandomUtils.nextInt(10, bound));
                     ctx.collect(data);
                     System.out.println(Thread.currentThread().getId() + "-sand data:" + data);
                 }

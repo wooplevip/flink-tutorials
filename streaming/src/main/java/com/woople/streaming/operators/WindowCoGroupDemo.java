@@ -1,9 +1,7 @@
 package com.woople.streaming.operators;
 
-import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.flink.api.common.functions.CoGroupFunction;
-import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -13,9 +11,6 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.util.Collector;
-
-import java.util.List;
-import java.util.Random;
 
 public class WindowCoGroupDemo {
     public static void main(String[] args) throws Exception {
@@ -44,7 +39,6 @@ public class WindowCoGroupDemo {
                 .apply(new CoGroupFunction<Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple3<String, Integer, Integer>>() {
                     @Override
                     public void coGroup(Iterable<Tuple2<String, Integer>> first, Iterable<Tuple2<String, Integer>> second, Collector<Tuple3<String, Integer, Integer>> out) throws Exception {
-
                         first.forEach(x -> {
                             out.collect(new Tuple3<>(x.f0, x.f1, -999));
                         });
@@ -52,7 +46,6 @@ public class WindowCoGroupDemo {
                         second.forEach(y -> {
                             out.collect(new Tuple3<>(y.f0, y.f1, -999));
                         });
-
                     }
                 });
     }
@@ -65,7 +58,6 @@ public class WindowCoGroupDemo {
     }
 
     private static class DataSource extends RichParallelSourceFunction<Tuple2<String, Integer>> {
-
         private volatile boolean running = true;
 
         @Override

@@ -16,14 +16,10 @@ public class WindowJoinDemo {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
         env.setParallelism(1);
-
         DataStream<Tuple2<String, Integer>> orangeStream = env.addSource(new DataSource());
         DataStream<Tuple2<String, Integer>> greenStream = env.addSource(new DataSource());
-
         DataStream<Tuple3<String, Integer, Integer>> joinedStream = runWindowJoin(orangeStream, greenStream, 5);
-
-        joinedStream.print();
-
+        joinedStream.print("join");
         env.execute("Windowed Join Demo");
     }
 
@@ -55,7 +51,6 @@ public class WindowJoinDemo {
     }
 
     private static class DataSource extends RichParallelSourceFunction<Tuple2<String, Integer>> {
-
         private volatile boolean running = true;
 
         @Override
@@ -65,7 +60,6 @@ public class WindowJoinDemo {
 
             final long numElements = RandomUtils.nextLong(10, 20);
             int i = 0;
-            Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
             while (running && i < numElements) {
                 Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
                 Tuple2 data = new Tuple2<>(keys[RandomUtils.nextInt(0, 3)], RandomUtils.nextInt(0, bound));
@@ -73,7 +67,6 @@ public class WindowJoinDemo {
                 System.out.println(Thread.currentThread().getId() + "-sand data:" + data);
                 i++;
             }
-            Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
         }
 
         @Override
