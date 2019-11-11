@@ -10,7 +10,6 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 import org.apache.flink.util.Collector;
 
 public class ConnectDemo {
-
     public static void main(String[] args) throws Exception{
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
         env.setParallelism(1);
@@ -21,14 +20,14 @@ public class ConnectDemo {
         orangeStream.connect(greenStream).flatMap(new CoFlatMapFunction<Tuple2<String, Integer>, Tuple3<String, Integer, Integer>, Object>() {
             @Override
             public void flatMap1(Tuple2<String, Integer> value, Collector<Object> out) throws Exception {
-                if (!value.f0.contains(",")){
+                if (!value.f0.contains("@")){
                     out.collect(new Tuple3<>(value.f0, value.f1, RandomUtils.nextInt(0, value.f1)));
                 }
             }
 
             @Override
             public void flatMap2(Tuple3<String, Integer, Integer> value, Collector<Object> out) throws Exception {
-                for (String s : value.f0.split(",")) {
+                for (String s : value.f0.split("@")) {
                     out.collect(new Tuple3<>(s, value.f1, value.f2));
                 }
             }
@@ -38,17 +37,16 @@ public class ConnectDemo {
     }
 
     private static class DataSource1 extends RichParallelSourceFunction<Tuple2<String, Integer>> {
-
         private volatile boolean running = true;
 
         @Override
         public void run(SourceContext<Tuple2<String, Integer>> ctx) throws Exception {
             int bound = 50;
-            String[] keys = new String[]{"foo,xxyz", "bar", "baz"};
+            String[] keys = new String[]{"foo@xxyz", "bar", "baz"};
 
             final long numElements = RandomUtils.nextLong(10, 20);
             int i = 0;
-            Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
+
             while (running && i < numElements) {
                 Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
                 Tuple2 data = new Tuple2<>(keys[RandomUtils.nextInt(0, 3)], RandomUtils.nextInt(0, bound));
@@ -56,7 +54,6 @@ public class ConnectDemo {
                 System.out.println(Thread.currentThread().getId() + "-sand data:" + data);
                 i++;
             }
-            Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
         }
 
         @Override
@@ -72,7 +69,7 @@ public class ConnectDemo {
         @Override
         public void run(SourceContext<Tuple3<String, Integer, Integer>> ctx) throws Exception {
             int bound = 50;
-            String[] keys = new String[]{"foo,xxyz", "bar", "baz"};
+            String[] keys = new String[]{"foo@xxyz", "bar", "baz"};
 
             final long numElements = RandomUtils.nextLong(10, 20);
             int i = 0;
