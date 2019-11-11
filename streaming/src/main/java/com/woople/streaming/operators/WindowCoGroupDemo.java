@@ -28,26 +28,29 @@ public class WindowCoGroupDemo {
     }
 
     public static DataStream<Tuple3<String, Integer, Integer>> runWindowCoGroup(
-            DataStream<Tuple2<String, Integer>> grades,
-            DataStream<Tuple2<String, Integer>> salaries,
+            DataStream<Tuple2<String, Integer>> orangeStream,
+            DataStream<Tuple2<String, Integer>> greenStream,
             long windowSize) {
 
-        return grades.coGroup(salaries)
+        return orangeStream.coGroup(greenStream)
                 .where(new NameKeySelector())
                 .equalTo(new NameKeySelector())
                 .window(TumblingProcessingTimeWindows.of(Time.seconds(windowSize)))
-                .apply(new CoGroupFunction<Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple3<String, Integer, Integer>>() {
-                    @Override
-                    public void coGroup(Iterable<Tuple2<String, Integer>> first, Iterable<Tuple2<String, Integer>> second, Collector<Tuple3<String, Integer, Integer>> out) throws Exception {
-                        first.forEach(x -> {
-                            out.collect(new Tuple3<>(x.f0, x.f1, -999));
-                        });
+                .apply(new Join());
+    }
 
-                        second.forEach(y -> {
-                            out.collect(new Tuple3<>(y.f0, y.f1, -999));
-                        });
+    private static class Join implements CoGroupFunction<Tuple2<String, Integer>, Tuple2<String, Integer>, Tuple3<String, Integer, Integer>>{
+
+        @Override
+        public void coGroup(Iterable<Tuple2<String, Integer>> first, Iterable<Tuple2<String, Integer>> second, Collector<Tuple3<String, Integer, Integer>> out) throws Exception {
+            first.forEach(x -> {
+                second.forEach(y -> {
+                    if (x.f0.equals(y.f0)){
+                        out.collect(new Tuple3<>(x.f0, x.f1, y.f1));
                     }
                 });
+            });
+        }
     }
 
     private static class NameKeySelector implements KeySelector<Tuple2<String, Integer>, String> {
