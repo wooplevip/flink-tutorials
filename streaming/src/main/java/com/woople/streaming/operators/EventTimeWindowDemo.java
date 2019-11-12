@@ -41,7 +41,6 @@ public class EventTimeWindowDemo {
         env.execute("EventTime Demo");
     }
 
-
     private static class DataSource extends RichParallelSourceFunction<Tuple3<String, Integer, Long>> {
 
         private volatile boolean running = true;

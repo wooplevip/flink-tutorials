@@ -1,5 +1,6 @@
 package com.woople.streaming.operators;
 
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -57,13 +58,12 @@ public class IntervalJoinDemo {
                     new Tuple3<>("foo", random.nextInt(bound), getRandomInt(50, 70)), new Tuple3<>("foo", random.nextInt(bound),  getRandomInt(40, 60))};
             final long numElements = data.length;
             int i = 0;
-            Thread.sleep(2000);
             while (running && i < numElements) {
+                Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
                 ctx.collect(data[i]);
                 System.out.println(Thread.currentThread().getId() + "-" + this.name + "-sand data:" + data[i]);
                 i++;
             }
-            Thread.sleep(2000);
         }
 
         @Override
