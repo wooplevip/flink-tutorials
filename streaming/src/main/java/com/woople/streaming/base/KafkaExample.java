@@ -29,7 +29,6 @@ public class KafkaExample{
 		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
 		env.getConfig().setGlobalJobParameters(params);
-		//env.getCheckpointConfig().setPreferCheckpointForRecovery(true);
 
 		Properties properties = new Properties();
 
@@ -55,7 +54,7 @@ public class KafkaExample{
 		input.addSink(
 			new FlinkKafkaProducer<>(
 				"baz",
-				new KafkaSerializationSchemaImpl(),
+				new KafkaSerializationSchemaImpl("baz"),
 					properties,
 				FlinkKafkaProducer.Semantic.EXACTLY_ONCE)).name("Example Sink");
 
