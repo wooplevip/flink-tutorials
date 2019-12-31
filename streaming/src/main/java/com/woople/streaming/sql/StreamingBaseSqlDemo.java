@@ -1,5 +1,6 @@
 package com.woople.streaming.sql;
 
+import com.woople.streaming.utils.MemoryAppendStreamTableSink;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;

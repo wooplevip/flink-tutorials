@@ -1,4 +1,4 @@
-package com.woople.streaming.sql;
+package com.woople.streaming.utils;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
