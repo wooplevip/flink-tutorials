@@ -3,6 +3,7 @@ package com.woople.streaming.state;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
+import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
 
@@ -13,11 +14,12 @@ public class KeyedStateDemo {
         env.setStateBackend(new FsStateBackend("file:///Users/peng/tmp/checkpoint", true));
         env.setParallelism(1);//
         env.enableCheckpointing(1000);
-        env.getCheckpointConfig().setMaxConcurrentCheckpoints(5);
+        env.getCheckpointConfig().setMaxConcurrentCheckpoints(10);
 
-        env.addSource(new DataSource())
-                .keyBy(0)
-                .flatMap(new CountWindowAverage())
+        KeyedStream keyedStream = env.addSource(new DataSource()).keyBy(0);
+        System.out.println(keyedStream.getParallelism() + "&&&&&&&&");
+
+        keyedStream.flatMap(new CountWindowAverage())
                 .print();
 
         env.execute("Keyed State demo");
@@ -31,13 +33,13 @@ public class KeyedStateDemo {
             int bound = 50;
             Long[] keys = new Long[]{1L, 2L, 3L};
 
-            final long numElements = RandomUtils.nextLong(10, 15);
+            final long numElements = RandomUtils.nextLong(10, 12);
             int i = 0;
             while (running && i < numElements) {
                 Thread.sleep(RandomUtils.nextLong(1, 5) * 1000L);
                 Tuple2 data = new Tuple2<>(keys[RandomUtils.nextInt(0, 3)], RandomUtils.nextLong(5, bound));
                 ctx.collect(data);
-                System.out.println(Thread.currentThread().getId() + "-sand data:" + data);
+                System.out.println(Thread.currentThread().getId() + "---------------------------------sand data:" + data);
                 i++;
             }
         }

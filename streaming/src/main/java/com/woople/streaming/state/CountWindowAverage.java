@@ -1,6 +1,9 @@
 package com.woople.streaming.state;
 
+import com.google.common.collect.Lists;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -9,17 +12,33 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
 public class CountWindowAverage extends RichFlatMapFunction<Tuple2<Long, Long>, Tuple2<Long, Long>> {
 
     /**
      * The ValueState handle. The first field is the count, the second field a running sum.
      */
-    private  ValueState<Tuple2<Long, Long>> sum;
+    private ValueState<Tuple2<Long, Long>> sum;
+
+    private ListState<Tuple2<Long, Long>> listState;
 
     @Override
     public void flatMap(Tuple2<Long, Long> input, Collector<Tuple2<Long, Long>> out) throws Exception {
+
+        Iterable<Tuple2<Long, Long>> iterable = listState.get();
+
+        List<Tuple2<Long, Long>> list = Lists.newArrayList(iterable);
+
+        System.out.println("list state:" + list);
+        listState.add(new Tuple2<>(input.f0, input.f1));
+
+
         // access the state value
-        Tuple2<Long, Long> currentSum = sum.value();
+        Tuple2<Long, Long> currentSum = Optional.ofNullable(sum.value()).orElse(Tuple2.of(0L, 0L));
 
         // update the count
         currentSum.f0 += 1;
@@ -30,7 +49,10 @@ public class CountWindowAverage extends RichFlatMapFunction<Tuple2<Long, Long>, 
         // update the state
         sum.update(currentSum);
 
+
+
         out.collect(new Tuple2<>(input.f0, currentSum.f1));
+
 
 //        // if the count reaches 2, emit the average and clear the state
 //        if (currentSum.f0 >= 2) {
@@ -44,8 +66,18 @@ public class CountWindowAverage extends RichFlatMapFunction<Tuple2<Long, Long>, 
         ValueStateDescriptor<Tuple2<Long, Long>> descriptor =
                 new ValueStateDescriptor<>(
                         "average", // the state name
-                        TypeInformation.of(new TypeHint<Tuple2<Long, Long>>() {}), // type information
-                        Tuple2.of(0L, 0L)); // default value of the state, if nothing was set
+                        TypeInformation.of(new TypeHint<Tuple2<Long, Long>>() {
+                        }));
         sum = getRuntimeContext().getState(descriptor);
+
+
+        ListStateDescriptor<Tuple2<Long, Long>> listDescriptor =
+                new ListStateDescriptor<>(
+                        "list", // the state name
+                        TypeInformation.of(new TypeHint<Tuple2<Long, Long>>() {
+                        }));
+
+
+        listState = getRuntimeContext().getListState(listDescriptor);
     }
 }
