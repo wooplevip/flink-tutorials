@@ -24,21 +24,15 @@ public class CountWindowAverage extends RichFlatMapFunction<Tuple2<Long, Long>, 
      */
     private ValueState<Tuple2<Long, Long>> sum;
 
-    private ListState<Tuple2<Long, Long>> listState;
 
     @Override
     public void flatMap(Tuple2<Long, Long> input, Collector<Tuple2<Long, Long>> out) throws Exception {
 
-        Iterable<Tuple2<Long, Long>> iterable = listState.get();
-
-        List<Tuple2<Long, Long>> list = Lists.newArrayList(iterable);
-
-        System.out.println("list state:" + list);
-        listState.add(new Tuple2<>(input.f0, input.f1));
-
-
         // access the state value
-        Tuple2<Long, Long> currentSum = Optional.ofNullable(sum.value()).orElse(Tuple2.of(0L, 0L));
+        Tuple2<Long, Long> currentSum = sum.value();
+        if (currentSum == null){
+            currentSum = new Tuple2<>(0L, 0L);
+        }
 
         // update the count
         currentSum.f0 += 1;
@@ -49,16 +43,11 @@ public class CountWindowAverage extends RichFlatMapFunction<Tuple2<Long, Long>, 
         // update the state
         sum.update(currentSum);
 
-
-
-        out.collect(new Tuple2<>(input.f0, currentSum.f1));
-
-
-//        // if the count reaches 2, emit the average and clear the state
-//        if (currentSum.f0 >= 2) {
-//            out.collect(new Tuple2<>(input.f0, currentSum.f1 / currentSum.f0));
-//            sum.clear();
-//        }
+        // if the count reaches 2, emit the average and clear the state
+        if (currentSum.f0 >= 2) {
+            out.collect(new Tuple2<>(input.f0, currentSum.f1 / currentSum.f0));
+            sum.clear();
+        }
     }
 
     @Override
@@ -71,13 +60,13 @@ public class CountWindowAverage extends RichFlatMapFunction<Tuple2<Long, Long>, 
         sum = getRuntimeContext().getState(descriptor);
 
 
-        ListStateDescriptor<Tuple2<Long, Long>> listDescriptor =
-                new ListStateDescriptor<>(
-                        "list", // the state name
-                        TypeInformation.of(new TypeHint<Tuple2<Long, Long>>() {
-                        }));
+//        ListStateDescriptor<Tuple2<Long, Long>> listDescriptor =
+//                new ListStateDescriptor<>(
+//                        "list", // the state name
+//                        TypeInformation.of(new TypeHint<Tuple2<Long, Long>>() {
+//                        }));
 
 
-        listState = getRuntimeContext().getListState(listDescriptor);
+        //listState = getRuntimeContext().getListState(listDescriptor);
     }
 }
