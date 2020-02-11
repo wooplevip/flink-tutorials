@@ -15,14 +15,13 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 public class StayTimeValueState {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
         env.setParallelism(1);
 
+        //f0:手机号，f0:当前位置，f1:上报位置的时间
         KeyedStream<Tuple3<String, String, Long>, Tuple> keyedStream = env.addSource(new StateDataSource()).keyBy(0);
-
         keyedStream.map(new RichMapFunction<Tuple3<String, String, Long>, Tuple3<String, String, Long>>() {
-            private ValueState<Tuple2<String, Long>> stayAreaTime;// area and first entry time
-
+            //f0:位置，f1:首次进入的时间
+            private ValueState<Tuple2<String, Long>> stayAreaTime;
             @Override
             public void open(Configuration parameters) throws Exception {
                 ValueStateDescriptor<Tuple2<String, Long>> descriptor =
