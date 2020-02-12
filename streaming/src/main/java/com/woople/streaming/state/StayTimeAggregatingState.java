@@ -33,7 +33,7 @@ public class StayTimeAggregatingState {
         KeyedStream<Tuple3<String, String, Long>, Tuple> keyedStream = source.keyBy(0);
 
         keyedStream.map(new RichMapFunction<Tuple3<String, String, Long>, Tuple2<String, Double>>() {
-            //
+            //输入为驻留时长，输出为平均驻留时长
             private AggregatingState<Long, Double> stayAreaTimeAgg;
             @Override
             public void open(Configuration parameters) throws Exception {
