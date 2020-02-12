@@ -14,20 +14,19 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-
-import java.util.Collections;
 import java.util.List;
 
 public class StayTimeListState {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
         env.setParallelism(1);
-
+        //f0:手机号，f0:当前位置，f1:上报位置的时间
         KeyedStream<Tuple3<String, String, Long>, Tuple> keyedStream = env.addSource(new StateDataSource()).keyBy(0);
 
         keyedStream.map(new RichMapFunction<Tuple3<String, String, Long>, Tuple3<String, String, Long>>() {
-            private ValueState<Tuple2<String, Long>> stayAreaTime;// area and first entry time
+            //当前区域的驻留时长, f0:上次位置，f1:上次的时间
+            private ValueState<Tuple2<String, Long>> stayAreaTime;
+            //历史轨迹每个区域的驻留时长，f0:位置，f1:驻留时间
             private ListState<Tuple2<String, Long>> stayAreaTimeHistory;
 
             @Override
@@ -50,16 +49,13 @@ public class StayTimeListState {
             @Override
             public Tuple3<String, String, Long> map(Tuple3<String, String, Long> value) throws Exception {
                 Tuple2<String, Long> currentAreaTime = stayAreaTime.value();
-
                 List<Tuple2<String, Long>> currentStayAreaTimeHistory = Lists.newArrayList(stayAreaTimeHistory.get());
-
                 long historyTime = 0L;
-                Collections.reverse(currentStayAreaTimeHistory);
 
+                //遍历历史数据计算所有当前区域的驻留时长
                 for (Tuple2<String, Long> history : currentStayAreaTimeHistory) {
                     if (history.f0.equals(value.f1)){
-                        historyTime = history.f1;
-                        break;
+                        historyTime = historyTime + history.f1;
                     }
                 }
 
@@ -68,16 +64,17 @@ public class StayTimeListState {
                 if (currentAreaTime != null && value.f1.equals(currentAreaTime.f0)){
                     long sum = value.f2 - currentAreaTime.f1 + historyTime;
                     result.setFields(value.f0, value.f1, sum);
-                    stayAreaTimeHistory.add(new Tuple2<>(value.f1, sum));
+                    stayAreaTimeHistory.add(new Tuple2<>(value.f1, value.f2 - currentAreaTime.f1));
                 }else {
+                    stayAreaTimeHistory.add(new Tuple2<>(value.f1, 0L));
                     result.setFields(value.f0, value.f1, historyTime);
-                    stayAreaTime.update(new Tuple2<>(value.f1, value.f2));
                 }
 
+                stayAreaTime.update(new Tuple2<>(value.f1, value.f2));
                 return result;
             }
         }).print();
 
-        env.execute("StayTimeValueState demo");
+        env.execute("StayTimeListState demo");
     }
 }
