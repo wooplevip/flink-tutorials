@@ -66,7 +66,6 @@ public class StayTimeListState {
                     result.setFields(value.f0, value.f1, sum);
                     stayAreaTimeHistory.add(new Tuple2<>(value.f1, value.f2 - currentAreaTime.f1));
                 }else {
-                    stayAreaTimeHistory.add(new Tuple2<>(value.f1, 0L));
                     result.setFields(value.f0, value.f1, historyTime);
                 }
 
