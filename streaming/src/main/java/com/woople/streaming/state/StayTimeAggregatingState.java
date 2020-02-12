@@ -18,8 +18,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 public class StayTimeAggregatingState {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
         env.setParallelism(1);
+        //f0:手机号，f0:当前位置，f1:驻留时长
         DataStream<Tuple3<String, String, Long>> source = env.fromElements("19911111111,A,6", "19911111112,A,12", "19911111111,A,3"
                 , "19911111112,A,6", "19911111111,A,12", "19911111112,A,9")
                 .map(new MapFunction<String, Tuple3<String, String, Long>>() {
@@ -33,8 +33,8 @@ public class StayTimeAggregatingState {
         KeyedStream<Tuple3<String, String, Long>, Tuple> keyedStream = source.keyBy(0);
 
         keyedStream.map(new RichMapFunction<Tuple3<String, String, Long>, Tuple2<String, Double>>() {
+            //
             private AggregatingState<Long, Double> stayAreaTimeAgg;
-
             @Override
             public void open(Configuration parameters) throws Exception {
                 AggregatingStateDescriptor<Long, AverageAccumulator, Double> aggDescriptor =
@@ -78,7 +78,7 @@ public class StayTimeAggregatingState {
             }
         }).print();
 
-        env.execute("StayTimeValueState demo");
+        env.execute("StayTimeAggregatingState demo");
     }
 
     private static class AverageAccumulator {
