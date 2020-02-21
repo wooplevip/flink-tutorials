@@ -17,7 +17,7 @@ import org.apache.flink.util.Collector;
 
 import java.util.List;
 
-public class TumblingWindowsDemo {
+public class SessionWindowsDemo {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
         env.setParallelism(1);
