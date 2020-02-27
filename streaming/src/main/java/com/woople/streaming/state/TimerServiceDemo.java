@@ -1,53 +1,94 @@
 package com.woople.streaming.state;
 
-import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.datastream.KeyedStream;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
+import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
+import org.apache.flink.util.Collector;
 
-public class StayTimeValueState {
+public class TimerServiceDemo {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
 
-        //f0:手机号，f0:当前位置，f1:上报位置的时间
-        KeyedStream<Tuple3<String, String, Long>, Tuple> keyedStream = env.addSource(new StateDataSource()).keyBy(0);
-        keyedStream.map(new RichMapFunction<Tuple3<String, String, Long>, Tuple3<String, String, Long>>() {
-            //f0:位置，f1:首次进入的时间
-            private ValueState<Tuple2<String, Long>> stayAreaTime;
-            @Override
-            public void open(Configuration parameters) throws Exception {
-                ValueStateDescriptor<Tuple2<String, Long>> descriptor =
-                        new ValueStateDescriptor<>(
-                                "stayAreaTime",
-                                TypeInformation.of(new TypeHint<Tuple2<String, Long>>() {
-                                }));
-                stayAreaTime = getRuntimeContext().getState(descriptor);
+        DataStream<Tuple3<String, Long, Long>> stream = env.addSource(new DataSource());
+
+        stream.keyBy(0)
+                .process(new CountWithTimeoutFunction()).print("Result: ");
+
+        env.execute("TimerServiceDemo");
+    }
+
+    public static class CountWithTimeoutFunction
+            extends KeyedProcessFunction<Tuple, Tuple3<String, Long, Long>, Tuple3<String, Long, Long>> {
+
+        /** The state that is maintained by this process function */
+        private ValueState<Tuple3<String, Long, Long>> state;
+
+        @Override
+        public void open(Configuration parameters) throws Exception {
+            state = getRuntimeContext().getState(new ValueStateDescriptor<>("myState",TypeInformation.of(
+                    new TypeHint<Tuple3<String, Long, Long>>() {
+            })));
+        }
+
+        @Override
+        public void processElement(
+                Tuple3<String, Long, Long> value,
+                Context ctx,
+                Collector<Tuple3<String, Long, Long>> out) throws Exception {
+
+            // write the state back
+            state.update(value);
+
+            // schedule the next timer 60 seconds from the current event time
+            ctx.timerService().registerProcessingTimeTimer(value.f2);
+
+            out.collect(value);
+        }
+
+        @Override
+        public void onTimer(
+                long timestamp,
+                OnTimerContext ctx,
+                Collector<Tuple3<String, Long, Long>> out) throws Exception {
+
+            System.out.println(System.currentTimeMillis() + "====");
+            // get the state for the key that scheduled the timer
+            Tuple3<String, Long, Long> result = state.value();
+            out.collect(result);
+        }
+    }
+
+
+    private static class DataSource extends RichParallelSourceFunction<Tuple3<String, Long, Long>> {
+
+        private volatile boolean running = true;
+
+        @Override
+        public void run(SourceContext<Tuple3<String, Long, Long>> ctx) throws Exception {
+            Tuple3[] data = new Tuple3[]{
+                    new Tuple3<>("foo", System.currentTimeMillis(), System.currentTimeMillis() + 10000), new Tuple3<>("foo", System.currentTimeMillis(), System.currentTimeMillis() + 10000)};
+            final long numElements = data.length;
+            int i = 0;
+            while (running && i < numElements) {
+                ctx.collect(data[i]);
+                System.out.println("sand data:" + data[i]);
+                i++;
+                Thread.sleep(90000);
             }
+        }
 
-            @Override
-            public Tuple3<String, String, Long> map(Tuple3<String, String, Long> value) throws Exception {
-                Tuple2<String, Long> currentAreaTime = stayAreaTime.value();
-                Tuple3<String, String, Long> result = new Tuple3<>();
-
-                if (currentAreaTime != null && value.f1.equals(currentAreaTime.f0)){
-                    result.setFields(value.f0, value.f1, value.f2 - currentAreaTime.f1);
-                }else {
-                    result.setFields(value.f0, value.f1, 0L);
-                    stayAreaTime.update(new Tuple2<>(value.f1, value.f2));
-                }
-
-                return result;
-            }
-        }).print();
-
-        env.execute("StayTimeValueState demo");
+        @Override
+        public void cancel() {
+            running = false;
+        }
     }
 }
