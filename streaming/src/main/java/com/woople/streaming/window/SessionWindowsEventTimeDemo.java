@@ -12,20 +12,15 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows;
-import org.apache.flink.streaming.api.windowing.assigners.GlobalWindows;
+import org.apache.flink.streaming.api.windowing.assigners.ProcessingTimeSessionWindows;
+import org.apache.flink.streaming.api.windowing.assigners.SessionWindowTimeGapExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.triggers.ContinuousEventTimeTrigger;
-import org.apache.flink.streaming.api.windowing.triggers.EventTimeTrigger;
-import org.apache.flink.streaming.api.windowing.triggers.Trigger;
-import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
-import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
-public class GlobalWindowsDemo {
+public class SessionWindowsEventTimeDemo {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
@@ -38,52 +33,30 @@ public class GlobalWindowsDemo {
                         return element.f2;
                     }
                 }).keyBy(0);
-        input.window(GlobalWindows.create()).trigger(new Trigger<Tuple3<String, Integer, Long>, GlobalWindow>() {
-            private AtomicLong num = new AtomicLong(0);
-            @Override
-            public TriggerResult onElement(Tuple3<String, Integer, Long> element, long timestamp, GlobalWindow window, TriggerContext ctx) throws Exception {
-                if (num.incrementAndGet() > 2){
-                    num.set(0);
-                    return TriggerResult.FIRE;
-                }
-                //                maxTimestamp = element.f2 - 2000L;
-//
-//                if (maxTimestamp <= ctx.getCurrentWatermark()) {
-//                    // if the watermark is already past the window fire immediately
-//                    return TriggerResult.FIRE;
-//                } else {
-//                    ctx.registerEventTimeTimer(maxTimestamp);
-//                    return TriggerResult.CONTINUE;
-//                }
-                //ctx.registerEventTimeTimer(1582336804000L);
-                return TriggerResult.CONTINUE;
-            }
+        input.window(EventTimeSessionWindows.withGap(Time.seconds(5)))
+                .apply(new WindowFunction<Tuple3<String, Integer, Long>, List<Tuple3<String, Integer, Long>>, Tuple, TimeWindow>() {
+                    @Override
+                    public void apply(Tuple tuple, TimeWindow window, Iterable<Tuple3<String, Integer, Long>> input, Collector<List<Tuple3<String, Integer, Long>>> out) throws Exception {
+                        System.out.println("Window1=" + StringUtilsPlus.stampToDate(window.getStart()) + "-" + StringUtilsPlus.stampToDate(window.getEnd()));
+                        List<Tuple3<String, Integer, Long>> list = Lists.newArrayList(input);
+                        out.collect(list);
+                    }
+                }).print("Result1:");
 
+        input.window(ProcessingTimeSessionWindows.withDynamicGap(new SessionWindowTimeGapExtractor<Tuple3<String, Integer, Long>>() {
+                    @Override
+                    public long extract(Tuple3<String, Integer, Long> element) {
+                        return element.f1 * 1000L;
+                    }
+                }))
+                .apply(new WindowFunction<Tuple3<String, Integer, Long>, List<Tuple3<String, Integer, Long>>, Tuple, TimeWindow>() {
             @Override
-            public TriggerResult onProcessingTime(long time, GlobalWindow window, TriggerContext ctx) throws Exception {
-                return null;
-            }
-
-            @Override
-            public TriggerResult onEventTime(long time, GlobalWindow window, TriggerContext ctx) throws Exception {
-                System.out.println("======");
-                return TriggerResult.FIRE;
-//                return time % 3==0  ?
-//                        TriggerResult.FIRE :
-//                        TriggerResult.CONTINUE;
-            }
-
-            @Override
-            public void clear(GlobalWindow window, TriggerContext ctx) throws Exception {
-                num.set(0);
-            }
-        }).apply(new WindowFunction<Tuple3<String, Integer, Long>, Object, Tuple, GlobalWindow>() {
-            @Override
-            public void apply(Tuple tuple, GlobalWindow window, Iterable<Tuple3<String, Integer, Long>> input, Collector<Object> out) throws Exception {
+            public void apply(Tuple tuple, TimeWindow window, Iterable<Tuple3<String, Integer, Long>> input, Collector<List<Tuple3<String, Integer, Long>>> out) throws Exception {
+                System.out.println("Window2=" + StringUtilsPlus.stampToDate(window.getStart()) + "-" + StringUtilsPlus.stampToDate(window.getEnd()));
                 List<Tuple3<String, Integer, Long>> list = Lists.newArrayList(input);
                 out.collect(list);
             }
-        }).print();
+        }).print("Result2:");
 
         env.execute();
     }

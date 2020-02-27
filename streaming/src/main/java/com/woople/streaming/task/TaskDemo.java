@@ -13,7 +13,7 @@ import org.apache.flink.util.Collector;
 public class TaskDemo {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
-        env.setParallelism(2);
+        env.setParallelism(1);
 
         env.addSource(new DataSource())
                 .map(new MyMapFunction())
@@ -21,6 +21,7 @@ public class TaskDemo {
                 .process(new MyKeyedProcessFunction())
                 .addSink(new DataSink()).setParallelism(1).name("Custom Sink");
 
+        System.out.println(env.getExecutionPlan());
         env.execute();
     }
 
@@ -28,7 +29,7 @@ public class TaskDemo {
         @Override
         public Tuple2<Long, String> map(Tuple2<Long, String> value) throws Exception {
             System.out.println(Thread.currentThread().getName() + " - key: " + value.f0);
-            return value;
+            return new Tuple2<>(value.f0, value.f1 + "-map");
         }
     }
 
