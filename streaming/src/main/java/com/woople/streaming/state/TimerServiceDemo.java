@@ -60,9 +60,10 @@ public class TimerServiceDemo {
                 OnTimerContext ctx,
                 Collector<Tuple3<String, Long, Long>> out) throws Exception {
 
-            System.out.println(System.currentTimeMillis() + "====");
+            System.out.println("Current time:" + System.currentTimeMillis());
             // get the state for the key that scheduled the timer
             Tuple3<String, Long, Long> result = state.value();
+            result.setField("bar", 0);
             out.collect(result);
         }
     }
@@ -75,15 +76,17 @@ public class TimerServiceDemo {
         @Override
         public void run(SourceContext<Tuple3<String, Long, Long>> ctx) throws Exception {
             Tuple3[] data = new Tuple3[]{
-                    new Tuple3<>("foo", System.currentTimeMillis(), System.currentTimeMillis() + 10000), new Tuple3<>("foo", System.currentTimeMillis(), System.currentTimeMillis() + 10000)};
+                    new Tuple3<>("foo", System.currentTimeMillis(), System.currentTimeMillis() + 5000),
+                    new Tuple3<>("foo", System.currentTimeMillis(), System.currentTimeMillis() + 10000)};
             final long numElements = data.length;
             int i = 0;
             while (running && i < numElements) {
                 ctx.collect(data[i]);
                 System.out.println("sand data:" + data[i]);
                 i++;
-                Thread.sleep(90000);
+                Thread.sleep(1000);
             }
+            Thread.sleep(90000);
         }
 
         @Override
