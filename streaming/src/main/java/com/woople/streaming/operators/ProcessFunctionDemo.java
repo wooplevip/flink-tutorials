@@ -33,7 +33,7 @@ public class ProcessFunctionDemo {
 
         DataStream<Tuple2<String, Long>> stream = env.addSource(new DataSource());
 
-        stream.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Tuple2<String, Long>>(Time.seconds(1)) {
+        stream.assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor<Tuple2<String, Long>>(Time.seconds(0)) {
             @Override
             public long extractTimestamp(Tuple2<String, Long> element) {
                 return element.f1;
@@ -67,7 +67,7 @@ public class ProcessFunctionDemo {
                 state.update(new Tuple4<>(value.f0, value.f1, -1L, 0));
                 ctx.timerService().registerEventTimeTimer(value.f1 + 2000);
             } else {
-                if (history.f3 == 0) {
+                if (history.f3 == 0 && value.f1 - history.f1 <= 2000) {
                     state.update(new Tuple4<>(history.f0, history.f1, value.f1, 1));
                 }
             }
@@ -95,8 +95,8 @@ public class ProcessFunctionDemo {
         public void run(SourceContext<Tuple2<String, Long>> ctx) throws Exception {
             Tuple2[] data = new Tuple2[]{
                     new Tuple2<>("1", 1584378010000L),//2020-03-17 01:00:10
-                    new Tuple2<>("2", 1584378011000L),//2020-03-17 01:00:11
-                    new Tuple2<>("1", 1584378014000L)//1584378013000L
+                    new Tuple2<>("2", 1584378009000L),//2020-03-17 01:00:09
+                    new Tuple2<>("1", 1584378012000L)
             };
             final long numElements = data.length;
             int i = 0;
