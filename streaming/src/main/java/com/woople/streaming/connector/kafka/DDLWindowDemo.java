@@ -1,21 +1,21 @@
 package com.woople.streaming.connector.kafka;
 
-import com.woople.streaming.utils.MemoryAppendStreamTableSink;
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.flink.api.common.typeinfo.TypeHint;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.TimeCharacteristic;
-import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
 import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
-import org.apache.flink.table.sinks.TableSink;
+/**
+ * 输入3条数据
+ * 1,2,2020-04-01 18:00:30
+ * 1,3,2020-04-01 18:00:31
+ * 1,9,2020-04-01 18:10:31
+ *
+ * 输出结果
+ * 1,"2020-04-01 18:00:30",5
+ *
+ * **/
 
-public class DDLDemo {
+public class DDLWindowDemo {
     public static void main(String[] args) throws Exception {
         EnvironmentSettings settings = EnvironmentSettings.newInstance().inStreamingMode().useBlinkPlanner().build();
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -24,9 +24,9 @@ public class DDLDemo {
 
         tableEnv.sqlUpdate("CREATE TABLE source (\n" +
                 "k INT,\n" +
-                "v STRING,\n" +
-                "order_time TIMESTAMP(3),\n" +
-                "WATERMARK FOR order_time AS order_time - INTERVAL '5' SECOND \n" +
+                "v INT,\n" +
+                "row_time TIMESTAMP(3),\n" +
+                "WATERMARK FOR row_time AS row_time - INTERVAL '5' SECOND \n" +
                 ") WITH (\n" +
                 "  'connector.type' = 'kafka', \n" +
                 "  'connector.version' = 'universal',\n" +
@@ -41,8 +41,8 @@ public class DDLDemo {
 
         tableEnv.sqlUpdate("CREATE TABLE sink (\n" +
                 "k INT,\n" +
-                "v STRING,\n" +
-                "order_time TIMESTAMP(3)\n" +
+                "wStart TIMESTAMP(3),\n" +
+                "s INT \n" +
                 ") WITH (\n" +
                 "  'connector.type' = 'kafka', \n" +
                 "  'connector.version' = 'universal',\n" +
@@ -57,13 +57,7 @@ public class DDLDemo {
                 ")");
 
 
-
-        tableEnv.sqlUpdate("INSERT INTO sink SELECT * FROM source WHERE k > 5");
-
-
-
-//        DataStream ds = tableEnv.toAppendStream(result, TypeInformation.of(new TypeHint<Tuple2<String, String>>(){}));
-//        ds.print();
+        tableEnv.sqlUpdate("INSERT INTO sink SELECT k,  TUMBLE_START(row_time, INTERVAL '5' SECOND) as wStart,  SUM(v) as s FROM source GROUP BY TUMBLE(row_time, INTERVAL '5' SECOND), k");
 
         env.execute();
     }
